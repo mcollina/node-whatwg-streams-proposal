@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+  <title>Big</title>
+  <link href='big.css' rel='stylesheet' type='text/css' />
+  <link href='highlight.css' rel='stylesheet' type='text/css' />
+  <style>
+    .new-shiny { background: #aaaaaa; }
+  </style>
+  <script src='big.js'></script>
+  <script src='highlight.js'></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body class='dark'>
+  <div class="title">WhatWG Streams in Node.js</div>
+  <div>
+    <pre><code>
+readableStream.pipeTo(writableStream)
+  .then(() => console.log("All data successfully written!"))
+  .catch(e => console.error("Something went wrong!", e));
+    </code></pre>
+  </div>
+  <div>
+    <h2>Let's agree that we cannot replace Node.j Streams</h2>
+  </div>
+  <div>
+    <h2 class="title">Why we want them in core</h2>
+
+    <ul>
+      <li>Part of the Web standards</li>
+      <li><code>fetch()</code>?</li>
+      <li>Make things more consistent in the ecosystem</li>
+      <li>All possible future uses!</li>
+    </ul>
+  </div>
+  <div>
+    <h2 class="title">Problems in adding them to core:</h2>
+
+    <ul>
+      <li>Globals</li>
+      <li>Same names of <code>require('stream').*</code></li>
+      <li>Add confusion to confution</li>
+      <li>semver-major and LTS</li>
+      <li>compatibility with other core APIs</li>
+    </ul>
+  </div>
+  <div class="title">
+    Async Iterators
+  </div>
+  <div>
+    <pre><code>
+async function print(readable) {
+  // This function works the same on both
+  // and Node streams can match the WhatWG API
+  // for async iterators
+  let data = '';
+  for await (const k of readable) {
+    data += k;
+  }
+  console.log(data);
+}
+    </code></pre>
+  </div>
+  <div>
+    The pipeline problem
+  </div>
+  <div>
+    <pre><code>
+async function run(origin, dest) {
+  try {
+    // buildWrite is hard
+    const write = buildWrite(dest);
+    // This is an async iterator
+    for await (let chunk of origin) {
+      await write(chunk.toString().toUpperCase());
+    }
+    await promisify(finished)(dest);
+  } catch (err) {
+    origin.destroy(err);
+    dest.destroy(err);
+  }
+}
+    </code></pre>
+  </div>
+  <div>
+    <pre><code>
+async function run(origin, dest) {
+function buildWrite(stream) {
+  // This is a good way of wrapping stream.write into a Promise.
+  // We are waiting for a drain event to resolve, and we are wrapping
+  // the error event. A consumer should probably use finished to
+  // know if the stream has completed.
+  const streamError = null;
+  stream.on("error", function(err) {
+    streamError = err;
+  });
+
+  return write;
+
+  function write(chunk) {
+    if (streamError) {
+      return Promise.reject(streamError);
+    }
+
+    return new Promise(function(resolve, reject) {
+      const res = stream.write(chunk);
+      if (res) {
+        resolve();
+      } else {
+        stream.once("drain", resolve);
+      }
+    });
+  }
+}
+    </code></pre>
+  </div>
+  <div>
+    <h2>Path forward</h2>
+    <ul>
+      <li>Take asyncIterator out of experimental in Node 10 and 11</li>
+      <li>Solve the "pipeline" problem with an utility in core</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Proposal:<br><br><code>require('whatwg-stream')</code></h2>
+
+    <ul>
+      <li>Ecosystem module</li>
+      <li>Semver-versioned</li>
+      <li>Support for node 6, 8, 10, 11</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Compatibility between the two streams</h2>
+  </div>
+  <div>
+    <pre><code>
+pipeline(
+  whatwgReadable,
+  nodeTransform,
+  whatwgWritable,
+  (err) => {})
+    </code></pre>
+  </div>
+  <div>
+    <pre><code>
+pipeline(
+  nodeReadable,
+  whatwgTransform1,
+  whatwgTransform2,
+  nodeWritable,
+  (err) => {})
+    </code></pre>
+  </div>
+  <div class="title">
+    <div style="height: 30%" class="bubblegum">
+      Thanks
+    </div>
+    <div style="font-size: 0.2em">
+      <em>@</em>matteocollina
+    </div>
+  </div>
+</body>
+</html>
