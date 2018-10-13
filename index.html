@@ -15,7 +15,7 @@
 </head>
 <body class='dark'>
   <div>
-    <div class="title">WhatWG Streams in Node.js</div>
+    <div class="title"><em>WhatWG</em> <em>Streams</em> in <em>Node.js</em></div>
     <div style="font-size: 0.2em">
       <span class="supersplit">@</span>matteocollina
     </div>
@@ -28,31 +28,65 @@ readableStream.pipeTo(writableStream)
     </code></pre>
   </div>
   <div>
-    <h2>Let's agree that we cannot replace Node.j Streams</h2>
+    Let's <em>agree</em> that we <em>cannot</em> <em>replace</em> Node.j Streams
   </div>
   <div>
-    <h2 class="title">Why we want them in core</h2>
+    <h2 class="title"><span class="bubblegum">Why</span> we want them in core</h2>
 
     <ul>
-      <li>Part of the Web standards</li>
+      <li>Part of the <span class="brunchPink">Web standards</span></li>
       <li><code>fetch()</code>?</li>
-      <li>Make things more consistent in the ecosystem</li>
+      <li>Make things more <span class="supersplit">consistent</span> in the ecosystspan</li>
       <li>All possible future uses!</li>
     </ul>
   </div>
   <div>
-    <h2 class="title">Problems in adding them to core:</h2>
+    <h2 class="title"><span class="bubblegum">Problems</span> in adding them to core:</h2>
 
     <ul>
-      <li>Globals</li>
+      <li><span class="brunchPink">Globals</span></li>
       <li>Same names of <code>require('stream').*</code></li>
-      <li>Add confusion to confution</li>
+      <li>Add <span class="supersplit">confusion</span> to confution</li>
       <li>semver-major and LTS</li>
       <li>compatibility with other core APIs</li>
     </ul>
   </div>
+  <div>
+    <h2 class="title"><em>Conversion</em> between the streams</h2>
+    <a href="https://github.com/nodejs/node/pull/22352">https://github.com/nodejs/node/pull/22352</a>
+  </div>
+  <div>
+    <pre><code>
+Readable.prototype.acquireStandardStream = function() {
+  emitExperimentalWarning('Readable.acquireStandardStream');
+  return new ReadableStream({
+    start: (controller) => {
+      this.pause();
+      this.on('data', (chunk) => {
+        // double buffer is happening
+        controller.enqueue(chunk);
+        this.pause();
+      });
+      this.once('end', () => controller.close());
+      this.once('error', (e) => controller.error(e));
+    },
+    pull: () => {
+      this.resume();
+    },
+    cancel: () => {
+      this.destroy();
+    },
+  }, {
+    highWaterMark: this.readableHighWaterMark,
+  });
+};
+    </code></pre>
+  </div>
+  <div>
+    <em>Double buffering</em> as a <em>non-goal</em>
+  </div>
   <div class="title">
-    Async Iterators
+    <em>Async</em> Iterators
   </div>
   <div>
     <pre><code>
@@ -138,7 +172,7 @@ function buildWrite(stream) {
     </ul>
   </div>
   <div>
-    <h2>Compatibility between the two streams</h2>
+    <h2><em>Compatibility</em> between the two streams</h2>
   </div>
   <div>
     <pre><code>
@@ -158,6 +192,9 @@ pipeline(
   nodeWritable,
   (err) => {})
     </code></pre>
+  </div>
+  <div>
+    Questions?
   </div>
   <div class="title">
     <div style="height: 30%" class="bubblegum">
